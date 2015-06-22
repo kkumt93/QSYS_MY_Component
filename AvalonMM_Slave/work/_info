@@ -1,0 +1,25 @@
+m255
+K3
+13
+cModel Technology
+Z0 dC:\Users\Matuda_Kazuaki\Documents\GitHub\QSYS_MY_Component\AvalonMM_Slave
+vAvalonMM_Slave
+!i10b 1
+Z1 !s100 A@h66dzk61<5:PGR0L9@I1
+Z2 I<?7WCB:_jO`YRHEI_jP4F2
+Z3 VGhn`>1SLA=?9oZFU;S3]U3
+Z4 dC:\Users\Matuda_Kazuaki\Documents\GitHub\QSYS_MY_Component\AvalonMM_Slave
+Z5 w1434570952
+Z6 8C:/Users/Matuda_Kazuaki/Documents/GitHub/QSYS_MY_Component/AvalonMM_Slave/AvalonMM_Slave.v
+Z7 FC:/Users/Matuda_Kazuaki/Documents/GitHub/QSYS_MY_Component/AvalonMM_Slave/AvalonMM_Slave.v
+L0 1
+Z8 OV;L;10.1d;51
+r1
+!s85 0
+31
+!s108 1434570966.870000
+!s107 C:/Users/Matuda_Kazuaki/Documents/GitHub/QSYS_MY_Component/AvalonMM_Slave/AvalonMM_Slave.v|
+Z9 !s90 -reportprogress|300|-work|work|C:/Users/Matuda_Kazuaki/Documents/GitHub/QSYS_MY_Component/AvalonMM_Slave/AvalonMM_Slave.v|
+!s101 -O0
+Z10 o-work work -O0
+Z11 n@avalon@m@m_@slave
