@@ -1,4 +1,4 @@
-
+`default_nettype none
 module DE1_SoC_Board_7SEG(
   input wire reset,
   input wire clk,
