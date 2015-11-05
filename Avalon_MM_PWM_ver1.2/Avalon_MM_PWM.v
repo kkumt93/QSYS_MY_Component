@@ -1,4 +1,4 @@
-`default_nettype none
+
 module Avalon_MM_PWM(
   input wire        reset,
   input wire        clk,
