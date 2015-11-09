@@ -4,10 +4,6 @@
 640~1279	line buffer2
 1280		ControlReg
 1281		StatusReg
-
-
-
-
 ------------------------------------------*/
 module Avalon_MM_Camera_Controller(
   input wire        reset,

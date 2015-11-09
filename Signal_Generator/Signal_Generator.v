@@ -9,8 +9,8 @@ module Signal_Generator(
   parameter start_value = 0;
   parameter end_value = 255;
   
-  reg              out_valid;
-  reg     [ 31: 0] out_data;
+  reg           out_valid;
+  reg	[31:0]	out_data;
   
 
   //AvalonST out
