@@ -1,4 +1,15 @@
-
+/*memory map*/
+/*----------------------------------------
+0     period1
+1     period2
+2     period3
+3     period4
+4     comparison_value1
+5     comparison_value2
+6     comparison_value3
+7     comparison_value4
+8     division_clock
+------------------------------------------*/
 module Avalon_MM_PWM(
   input wire        reset,
   input wire        clk,
