@@ -76,8 +76,29 @@ module Avalon_MM_PWM(
   end
 
   //Avalon bus read
-  always @* begin
-    readdata <= 16'h0;
+  always@(posedge clk) begin
+	if(read) begin
+       	case (address)
+       		4'b0000	:
+       			readdata <= period1;
+       		4'b0001 :
+       			readdata <= period2;
+       		4'b0010 :
+      		 	readdata <= period3;
+       		4'b0011 :
+       			readdata <= period4;
+       		4'b0100 :
+       			readdata <= comparison_value1;
+       		4'b0101 :
+       			readdata <= comparison_value2;
+       		4'b0110 :
+       			readdata <= comparison_value3;
+       		4'b0111 :
+       			readdata <= comparison_value4;
+       		4'b1000 :
+       			readdata <= division_value;
+      	endcase
+    end
   end
 
   PWM_Clock_Divider PWM_Clock_Divider_inst(
