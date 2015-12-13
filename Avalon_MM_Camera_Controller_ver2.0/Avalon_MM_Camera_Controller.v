@@ -16,9 +16,9 @@ module Avalon_MM_Camera_Controller(
   input wire 		clk_50,
   input wire [10:0] address,
   input wire        read,
-  output reg [15:0] readdata,
+  output reg [31:0] readdata,
   input wire        write,
-  input wire [15:0] writedata,
+  input wire [31:0] writedata,
   input wire        PCLK,
   input wire        CamHsync,
   input wire        CamVsync,
@@ -31,7 +31,7 @@ module Avalon_MM_Camera_Controller(
   wire          CamData_enable;
   wire [10:0] 	CamPix_count;
   reg  [15:0] 	StatusReg;
-  wire [15:0]   ConvertedData;
+  wire [23:0]   ConvertedData;
   wire [15:0]   CamData_out;
   wire [7:0]    CamData_r;
   wire [7:0]    CamData_g;
@@ -46,10 +46,10 @@ module Avalon_MM_Camera_Controller(
   wire [7:0] 	dif_br;
   wire [7:0] 	dif_rg;
   wire [7:0] 	CamData_h;
-  wire [15:0]	CamData_binary;
-  wire [15:0]   CamData_h_binary;
+  wire [23:0]	CamData_binary;
+  wire [23:0]   CamData_h_binary;
   reg 			clk_25;
-  reg  [15:0] 	Mem [1299:0];
+  reg  [23:0] 	Mem [1299:0];
   wire [9:0]    CamHsync_count;
   reg           Capture_flag;
   wire 			Cam_enable;
@@ -62,7 +62,7 @@ module Avalon_MM_Camera_Controller(
   //Avalon bus write
   always @(posedge clk) begin
     if (write) begin
-        Mem[address] <= writedata;
+        Mem[address] <= writedata[23:0];
     end else begin
       if((CamHsync_count[0] == 0) && (Cam_enable == 1)) begin
         Mem[(CamPix_count>>1)] <= ConvertedData;
@@ -76,9 +76,9 @@ module Avalon_MM_Camera_Controller(
   always @(posedge clk) begin
     if (read) begin
       if(address == 1282) begin
-        readdata <= StatusReg;
+        readdata <= {16'h0000,StatusReg};
       end else begin
-        readdata <= Mem[address];
+        readdata <= {Mem[address],8'h00};
       end
     end
   end
@@ -112,7 +112,7 @@ module Avalon_MM_Camera_Controller(
 
   assign CamData_gray = CamData_r2 + CamData_g2 + CamData_b2;
   //Binary
-  assign CamData_binary = (Mem[1284] <= CamData_gray[7:3]) ? 16'hffff : 16'h0000;
+  assign CamData_binary = (Mem[1284] <= CamData_gray[7:3]) ? 24'hffffff : 24'h000000;
   //HSV
   assign max = ((CamData_r >= CamData_g) && (CamData_r >= CamData_b)) ? CamData_r :
                ((CamData_g >= CamData_r) && (CamData_g >= CamData_b)) ? CamData_g :
@@ -130,13 +130,13 @@ module Avalon_MM_Camera_Controller(
                      (max == CamData_g) ? (dif_br*43) / (max - min) + 85  :
                      (max == CamData_b) ? (dif_rg*43) / (max - min) + 170 : 0;
 
-  assign CamData_h_binary = ((Mem[1285] <= CamData_h) && (Mem[1286] >= CamData_h)) ? 16'hffff : 16'h0000;
+  assign CamData_h_binary = ((Mem[1285] <= CamData_h) && (Mem[1286] >= CamData_h)) ? 24'hffffff : 24'h000000;
 
   //Converted Data
-  assign ConvertedData = (Mem[1283] == 0) ? CamData_out 												 :
-                         (Mem[1283] == 1) ? {CamData_gray[7:3],CamData_gray[7:3],1'b1,CamData_gray[7:3]} :
-                         (Mem[1283] == 2) ? CamData_binary                                               :
-                         (Mem[1283] == 3) ? CamData_h_binary                                             : CamData_out;
+  assign ConvertedData = (Mem[1283] == 0) ? {CamData_r,CamData_g,CamData_b} 		 :
+                         (Mem[1283] == 1) ? {CamData_gray,CamData_gray,CamData_gray} :
+                         (Mem[1283] == 2) ? CamData_binary                           :
+                         (Mem[1283] == 3) ? CamData_h_binary                         : {CamData_r,CamData_g,CamData_b};
 
   Camera_Controller Camera_Controller_inst(
     .reset(reset),
