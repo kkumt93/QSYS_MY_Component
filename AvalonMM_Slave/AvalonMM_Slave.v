@@ -13,6 +13,7 @@ reg [31:0] Mem [3:0];
 //Avalon bus write
 always@(posedge clk,posedge reset) begin
   if (reset) begin
+  //reset event
   end
   else begin
     if (write) begin
@@ -24,6 +25,7 @@ end
 //Avalon bus read
 always@(posedge clk,posedge reset) begin
   if (reset) begin
+  //reset event
   end
   else begin
     if (read) begin
@@ -33,7 +35,6 @@ always@(posedge clk,posedge reset) begin
 end
 
 endmodule
-    
 
       
     

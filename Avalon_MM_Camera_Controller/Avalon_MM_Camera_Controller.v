@@ -42,21 +42,22 @@ module Avalon_MM_Camera_Controller(
   wire [7:0]    CamData_g2;
   wire [7:0]    CamData_b2;
   wire [7:0]    CamData_gray;
-  wire [7:0] 	  max;
-  wire [7:0] 	  min;
-  wire [7:0] 	  dif_gb;
-  wire [7:0] 	  dif_br;
-  wire [7:0] 	  dif_rg;
+  wire [7:0] 	max;
+  wire [7:0] 	min;
+  wire [7:0] 	dif_gb;
+  wire [7:0] 	dif_br;
+  wire [7:0] 	dif_rg;
   wire [7:0]    s;
   wire [7:0]    v;
-  wire [7:0] 	  CamData_h;
-  wire [15:0]	  CamData_binary;
+  wire [7:0] 	CamData_h;
+  wire [15:0]	CamData_binary;
   wire [15:0]   CamData_h_binary;
   wire [15:0]   CamData_h_binary_median;
   wire [15:0]   HSV_Threshold_low;
   wire [15:0]   HSV_Threshold_high;
+  wire [15:0]   MovingAverage_wire;
 
-  reg 			    clk_25;
+  reg 			clk_25;
   //Camera IP reg
   reg  [15:0]   ControlReg;   
   reg  [15:0] 	StatusReg;
@@ -70,9 +71,10 @@ module Avalon_MM_Camera_Controller(
   reg  [7:0]    HSV_Threshold_V_high;
   reg  [15:0]   FrameNumber;
   reg  [15:0] 	Mem [1281:0];
-  reg  [31:0]   Threshold_counter1;
-  reg  [31:0]   Threshold_counter2;
-
+  reg  [15:0]   Threshold_counter1;
+  reg  [15:0]   Threshold_counter2;
+  reg  [319:0]  MovingAverage;
+  reg  [15:0]   Threshold_counter [639:0];
   //CamData store wire
   wire [9:0]    CamHsync_count;
   wire [9:0]    CamHsync_count_out;
@@ -120,18 +122,20 @@ module Avalon_MM_Camera_Controller(
   end
 
   //Avalon bus read
-  always @(posedge clk) begin
+  always @* begin
     if (read) begin
-      if(address == 1) begin
-      	readdata <= Threshold_counter1;
-      end else if(address == 641) begin
-      	readdata <= Threshold_counter2;
+      if(address == 639) begin
+      	readdata <= {16'h0,MovingAverage_wire};
+      end else if(address == 1279) begin
+      	readdata <= {16'h0,MovingAverage_wire};
       end else if(address == 1282) begin
         readdata <= {16'h0000,StatusReg};
       end else if(address == 1284) begin
       	readdata <= {16'h0000,Threshold};
       end else if(address == 1287) begin
        	readdata <= {16'h0000,FrameNumber};
+      end else if(CamHsync_count == 480) begin
+      	readdata <= {16'h0000,Threshold_counter[address]};
       end else begin
         readdata <= CamData_32bit;
       end
@@ -139,7 +143,7 @@ module Avalon_MM_Camera_Controller(
   end
   assign Mem_wire = Mem[address];
   assign CamData_32bit = (Mem_wire == 16'hffff) ? 32'h00ffffff : 
-                         	((Mem_wire == 16'h0000) ? 32'h00000000 : {8'h00,Mem_wire[15:11],3'b000,Mem_wire[10:5],2'b00,Mem_wire[4:0],3'b000});
+                         ((Mem_wire == 16'h0000) ? 32'h00000000 : {8'h00,Mem_wire[15:11],3'b000,Mem_wire[10:5],2'b00,Mem_wire[4:0],3'b000});
 
   //Camera data store
   always @(negedge clk) begin
@@ -149,28 +153,61 @@ module Avalon_MM_Camera_Controller(
 		Mem[(CamPix_count>>1)+640] <= ConvertedData;
   	end
   end
-  assign Cam_enable     = CamData_enable & ControlReg[0];
+
+  //Camera timing signal 
   assign CamHsync_count = (FilterSelect == 4) ? CamHsync_count_out_delay : CamHsync_count_out; 
   assign CamPix_count   = (FilterSelect == 4) ? CamPix_count_out_delay   : CamPix_count_out;
   assign CamData_enable = (FilterSelect == 4) ? CamData_enable_out_delay : CamData_enable_out;
+  assign Cam_enable     = CamData_enable & ControlReg[0];
 
   //Threshold_counter
-  always @(negedge clk) begin
-  	if(read == 1 && address == 641) begin
-  		Threshold_counter1 <= 0; 
-  	end else if(read == 1 && address == 1) begin
-  		Threshold_counter2 <= 0;
+  always @(posedge clk) begin
+  	if(CamHsync_count == 1) begin
+  		MovingAverage <= 0;
+  	end else if((CamHsync_count[0] == 0) && ((CamPix_count>>1) == 1)) begin
+  		Threshold_counter1 <= 0;
+  	end else if((CamHsync_count[0] == 0) && ((CamPix_count>>1) == 639)) begin
+  		MovingAverage <= {Threshold_counter1,MovingAverage[319:16]};
   	end else if((CamHsync_count[0] == 0) && (Cam_enable == 1)) begin
   		if(ConvertedData == 16'hffff) begin
 			Threshold_counter1 <= Threshold_counter1 + 1;
 		end
+  	end else if((CamHsync_count[0] == 1) && ((CamPix_count>>1) == 1)) begin
+  		Threshold_counter2 <= 0;
+  	end else if((CamHsync_count[0] == 1) && ((CamPix_count>>1) == 639)) begin
+  		MovingAverage <= {Threshold_counter2,MovingAverage[319:16]};
   	end else if((CamHsync_count[0] == 1) && (Cam_enable == 1)) begin
   		if(ConvertedData == 16'hffff) begin
 			Threshold_counter2 <= Threshold_counter2 + 1;
 		end
   	end
   end
+  assign MovingAverage_wire = (MovingAverage[319:304] + MovingAverage[303:288] + MovingAverage[287:272] + MovingAverage[271:256] + MovingAverage[255:240] +
+                               MovingAverage[239:224] + MovingAverage[223:208] + MovingAverage[207:192] + MovingAverage[191:176] + MovingAverage[175:160] +
+                               MovingAverage[159:144] + MovingAverage[143:128] + MovingAverage[127:112] + MovingAverage[111:96] + MovingAverage[95:80] +
+                               MovingAverage[79:64] + MovingAverage[63:48] + MovingAverage[47:32] + MovingAverage[31:16] + MovingAverage[15:0]) / 20;
 
+  always @(posedge clk) begin
+  	if((CamHsync_count == 1) && (Cam_enable == 1))begin
+  		Threshold_counter[(CamPix_count>>1)] <= 0;  		
+  	end else if(Cam_enable == 1) begin
+  		if(ConvertedData == 16'hffff) begin
+  			Threshold_counter[(CamPix_count>>1)] <= Threshold_counter[(CamPix_count>>1)] + 1;
+  		end
+  	end
+  end
+
+  /*Threshold_counter2
+  always @(posedge clk) begin
+  	if((CamHsync_count[0] == 1) && ((CamPix_count>>1) == 1)) begin
+  		Threshold_counter2 <= 0;
+  	end else if((CamHsync_count[0] == 1) && (Cam_enable == 1)) begin
+  		if(ConvertedData == 16'hffff) begin
+			Threshold_counter2 <= Threshold_counter2 + 1;
+		end
+  	end
+  end
+  */
   //StatusReg
   always @(posedge clk) begin
     StatusReg <= { 5'b00000, ControlReg[0], CamHsync_count};
